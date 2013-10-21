@@ -3,10 +3,11 @@ Parsimonious
 ============
 
 Parsimonious aims to be the fastest arbitrary-lookahead parser written in pure
-Python. It's based on parsing expression grammars (PEGs), which means you
-feed it a simplified sort of EBNF notation. Parsimonious was designed to
-undergird a MediaWiki parser that wouldn't take 5 seconds or a GB of RAM to do
-one page.
+Python—and the most usable. It's based on parsing expression grammars (PEGs),
+which means you feed it a simplified sort of EBNF notation. Parsimonious was
+designed to undergird a MediaWiki parser that wouldn't take 5 seconds or a GB
+of RAM to do one page, but it's applicable to all sorts of languages.
+
 
 Goals
 =====
@@ -45,7 +46,7 @@ symbol, but you can override that.
 
 Next, let's parse something and get an abstract syntax tree::
 
-    >>> grammar.parse('((bold stuff))')
+    >>> print grammar.parse('((bold stuff))')
     <Node called "bold_text" matching "((bold stuff))">
         <Node called "bold_open" matching "((">
         <RegexNode called "text" matching "bold stuff">
@@ -58,24 +59,21 @@ the tree and do something useful with it.
 Status
 ======
 
-0.3 is a pretty usable release for inputs that aren't huge. I haven't really
-started optimizing yet. And note that there may be API changes until we get to
-1.0.
-
 * Everything that exists works. Test coverage is good.
 * I don't plan on making any backward-incompatible changes to the rule syntax
-  in the future, so you can write grammars without fear.
+  in the future, so you can write grammars with confidence.
 * It may be slow and use a lot of RAM; I haven't measured either yet. However,
-  I have several macro- and micro-optimizations in mind.
-* Error reporting is fairly uninformative, and debugging is nonexistent.
-  However, ``repr`` methods of expressions, grammars, and nodes are very clear
-  and helpful. Ones of ``Grammar`` objects are even round-trippable! Huge
-  things are planned for grammar debugging in the future.
+  I have yet to begin optimizing in earnest.
+* Error reporting is now in place. ``repr`` methods of expressions, grammars,
+  and nodes are clear and helpful as well. The ``Grammar`` ones are
+  even round-trippable!
 * The grammar extensibility story is underdeveloped at the moment. You should
   be able to extend a grammar by simply concatening more rules onto the
   existing ones; later rules of the same name should override previous ones.
   However, this is untested and may not be the final story.
 * Sphinx docs are coming, but the docstrings are quite useful now.
+* Note that there may be API changes until we get to 1.0, so be sure to pin to
+  the version you're using.
 
 Coming Soon
 -----------
@@ -83,6 +81,7 @@ Coming Soon
 * Optimizations to make Parsimonious worthy of its name
 * Tighter RAM use
 * Better-thought-out grammar extensibility story
+* Amazing grammar debugging
 
 
 A Little About PEG Parsers
@@ -111,14 +110,17 @@ Thus, ambiguity is resolved by always yielding the first successful recognition.
 Writing Grammars
 ================
 
-Grammars are defined by a series of rules, one per line. The syntax should be
-familiar to anyone who uses regexes or reads programming language manuals. An
-example will serve best::
+Grammars are defined by a series of rules. The syntax should be familiar to
+anyone who uses regexes or reads programming language manuals. An example will
+serve best::
 
     styled_text = bold_text / italic_text
     bold_text   = "((" text "))"
     italic_text = "''" text "''"
     text        = ~"[A-Z 0-9]*"i
+
+You can wrap a rule across multiple lines if you like; the syntax is very
+forgiving.
 
 
 Syntax Reference
@@ -133,7 +135,7 @@ Syntax Reference
                         things. ``a b c`` matches spots where those 3
                         terms appear in that order.
 
-``a / b``               Alternatives. The first to succeed of ``a / b / c`` 
+``a / b / c``           Alternatives. The first to succeed of ``a / b / c``
                         wins.
 
 ``thing?``              An optional expression. This is greedy, always consuming 
@@ -160,6 +162,9 @@ Syntax Reference
                         Ultimately, I'd like to deprecate explicit regexes and
                         instead have Parsimonious dynamically build them out of
                         simpler primitives.
+
+``(things)``            Parentheses are used for grouping, like in every other
+                        language.
 ====================    ========================================================
 
 
@@ -288,10 +293,6 @@ Optimizations
 * We could possibly compile the grammar into VM instructions, like in "A
   parsing machine for PEGs" by Medeiros.
 * If the recursion gets too deep in practice, use trampolining to dodge it.
-* It looks like we could make an architecture-independent ``.o`` file and use LLVM
-  to JIT it to whatever arch we're on: https://github.com/dabeaz/bitey/. Of
-  course, then everybody has to have LLVM, which is even harder to set up than
-  a vanilla C toolchain.
 
 Niceties
 --------
@@ -307,8 +308,33 @@ Niceties
 Version History
 ===============
 
+0.5
+  .. warning::
+
+      This release makes some backward-incompatible changes. See below.
+
+  * Add alpha-quality error reporting. Now, rather than returning ``None``,
+    ``parse()`` and ``match()`` raise ``ParseError`` if they don't succeed.
+    This makes more sense, since you'd rarely attempt to parse something and
+    not care if it succeeds. It was too easy before to forget to check for a
+    ``None`` result. ``ParseError`` gives you a human-readable unicode
+    representation as well as some attributes that let you construct your own
+    custom presentation.
+  * Grammar construction now raises ``ParseError`` rather than ``BadGrammar``
+    if it can't parse your rules.
+  * ``parse()`` now takes an optional ``pos`` argument, like ``match()``.
+  * Make the ``_str__()`` method of ``UndefinedLabel`` return the right type.
+  * Support splitting rules across multiple lines, interleaving comments,
+    putting multiple rules on one line (but don't do that) and all sorts of
+    other horrific behavior.
+  * Tolerate whitespace after opening parens.
+  * Add support for single-quoted literals.
+
 0.4
-  * Python 3 support
+  * Support Python 3.
+  * Fix ``import *`` for ``parsimonious.expressions``.
+  * Rewrite grammar compiler so right-recursive rules can be compiled and
+    parsing no longer fails in some cases with forward rule references.
 
 0.3
   * Support comments, the ``!`` ("not") operator, and parentheses in grammar
@@ -342,3 +368,6 @@ Version History
 
 0.1
   * A rough but useable preview release
+
+Thanks to Wiki Loves Monuments Panama for showing their support with a generous
+gift.
