@@ -259,3 +259,60 @@ class RepresentationTests(TestCase):
 
         """
         unicode(rule_grammar)
+
+    def test_unicode_keep_parens(self):
+        """Make sure converting an expression to unicode doesn't strip
+        parenthesis.
+
+        """
+        # ZeroOrMore
+        eq_(unicode(Grammar('foo = "bar" ("baz" "eggs")* "spam"')),
+            u'foo = "bar" ("baz" "eggs")* "spam"')
+
+        # OneOf
+        eq_(unicode(Grammar('foo = "bar" ("baz" / "eggs") "spam"')),
+            u'foo = "bar" ("baz" / "eggs") "spam"')
+
+        # Lookahead
+        eq_(unicode(Grammar('foo = "bar" &("baz" "eggs") "spam"')),
+            u'foo = "bar" &("baz" "eggs") "spam"')
+
+        # Multiple sequences
+        eq_(unicode(Grammar('foo = ("bar" "baz") / ("baff" "bam")')),
+            u'foo = ("bar" "baz") / ("baff" "bam")')
+
+    def test_unicode_surrounding_parens(self):
+        """
+        Make sure there are no surrounding parens around the entire
+        right-hand side of an expression (as they're unnecessary).
+
+        """
+        eq_(unicode(Grammar('foo = ("foo" ("bar" "baz"))')),
+            u'foo = "foo" ("bar" "baz")')
+
+
+class SlotsTests(TestCase):
+    """Tests to do with __slots__"""
+
+    def test_subclassing(self):
+        """Make sure a subclass of a __slots__-less class can introduce new
+        slots itself.
+
+        This isn't supposed to work, according to the language docs:
+
+            When inheriting from a class without __slots__, the __dict__
+            attribute of that class will always be accessible, so a __slots__
+            definition in the subclass is meaningless.
+
+        But it does.
+
+        """
+        class Smoo(Optional):
+            __slots__ = ['smoo']
+
+            def __init__(self):
+                self.smoo = 'smoo'
+
+        smoo = Smoo()
+        eq_(smoo.__dict__, {})  # has a __dict__ but with no smoo in it
+        eq_(smoo.smoo, 'smoo')  # The smoo attr ended up in a slot.

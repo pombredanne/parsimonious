@@ -7,14 +7,16 @@ try:
 except ImportError:
     pass
 
+from io import open
 from setuptools import setup, find_packages
 
+long_description=open('README.rst', 'r', encoding='utf8').read()
 
 setup(
     name='parsimonious',
     version='0.6.2',
     description='(Soon to be) the fastest pure-Python PEG parser I could muster',
-    long_description=open('README.rst').read(),
+    long_description=long_description,
     author='Erik Rose',
     author_email='erikrose@grinchcentral.com',
     license='MIT',
@@ -33,7 +35,6 @@ setup(
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.1',
         'Programming Language :: Python :: 3.2',
         'Programming Language :: Python :: 3.3',
         'Topic :: Scientific/Engineering :: Information Analysis',

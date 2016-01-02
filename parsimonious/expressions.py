@@ -170,7 +170,7 @@ class Expression(StrAndRepr):
             # Don't bother reporting on unnamed expressions (unless that's all
             # we've seen so far), as they're hard to track down for a human.
             # Perhaps we could include the unnamed subexpressions later as
-            # auxilliary info.
+            # auxiliary info.
             error.expr = self
             error.pos = pos
 
@@ -188,8 +188,11 @@ class Expression(StrAndRepr):
         Return unicode. If I have no ``name``, omit the left-hand side.
 
         """
-        return ((u'%s = %s' % (self.name, self._as_rhs())) if self.name else
-                self._as_rhs())
+        rhs = self._as_rhs().strip()
+        if rhs.startswith('(') and rhs.endswith(')'):
+            rhs = rhs[1:-1]
+
+        return (u'%s = %s' % (self.name, rhs)) if self.name else rhs
 
     def _unicode_members(self):
         """Return an iterable of my unicode-represented children, stopping
@@ -225,6 +228,17 @@ class Literal(Expression):
     def _as_rhs(self):
         # TODO: Get backslash escaping right.
         return '"%s"' % self.literal
+
+
+class TokenMatcher(Literal):
+    """An expression matching a single token of a given type
+
+    This is for use only with TokenGrammars.
+
+    """
+    def _uncached_match(self, token_list, pos, cache, error):
+        if token_list[pos].type == self.literal:
+            return Node(self.name, token_list, pos, pos + 1)
 
 
 class Regex(Expression):
@@ -301,7 +315,8 @@ class Sequence(Compound):
         return Node(self.name, text, pos, pos + length_of_sequence, children)
 
     def _as_rhs(self):
-        return u' '.join(self._unicode_members())
+        return u'({0})'.format(u' '.join(self._unicode_members()))
+
 
 class OneOf(Compound):
     """A series of expressions, one of which must match
@@ -318,7 +333,7 @@ class OneOf(Compound):
                 return Node(self.name, text, pos, node.end, children=[node])
 
     def _as_rhs(self):
-        return u' / '.join(self._unicode_members())
+        return u'({0})'.format(u' / '.join(self._unicode_members()))
 
 
 class Lookahead(Compound):
@@ -378,6 +393,7 @@ class Optional(Compound):
 # TODO: Merge with OneOrMore.
 class ZeroOrMore(Compound):
     """An expression wrapper like the * quantifier in regexes."""
+
     def _uncached_match(self, text, pos, cache, error):
         new_pos = pos
         children = []

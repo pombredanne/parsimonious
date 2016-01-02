@@ -5,17 +5,18 @@ optimizations that would be tedious to do when constructing an expression tree
 by hand.
 
 """
-import ast
+from collections import Mapping
 from inspect import isfunction, ismethod
 
-from parsimonious.exceptions import UndefinedLabel
+from parsimonious.exceptions import BadGrammar, UndefinedLabel
 from parsimonious.expressions import (Literal, Regex, Sequence, OneOf,
-    Lookahead, Optional, ZeroOrMore, OneOrMore, Not, expression)
+    Lookahead, Optional, ZeroOrMore, OneOrMore, Not, TokenMatcher,
+    expression)
 from parsimonious.nodes import NodeVisitor
-from parsimonious.utils import StrAndRepr
+from parsimonious.utils import StrAndRepr, evaluate_string
 
 
-class Grammar(StrAndRepr, dict):
+class Grammar(StrAndRepr, Mapping):
     """A collection of rules that describe a language
 
     You can start parsing from the default rule by calling ``parse()``
@@ -63,10 +64,17 @@ class Grammar(StrAndRepr, dict):
                                           ismethod(v) else
                 v) for k, v in more_rules.iteritems())
 
-        exprs, first = self._expressions_from_rules(rules, decorated_custom_rules)
-
-        self.update(exprs)
+        self._expressions, first = self._expressions_from_rules(rules, decorated_custom_rules)
         self.default_rule = first  # may be None
+
+    def __getitem__(self, rule_name):
+        return self._expressions[rule_name]
+
+    def __iter__(self):
+        return self._expressions.iterkeys()
+
+    def __len__(self):
+        return len(self._expressions)
 
     def default(self, rule_name):
         """Return a new Grammar whose :term:`default rule` is ``rule_name``."""
@@ -82,7 +90,7 @@ class Grammar(StrAndRepr, dict):
         no Expressions.
 
         """
-        new = Grammar(**self)
+        new = Grammar(**self._expressions)
         new.default_rule = self.default_rule
         return new
 
@@ -139,6 +147,18 @@ class Grammar(StrAndRepr, dict):
     def __repr__(self):
         """Return an expression that will reconstitute the grammar."""
         return "Grammar('%s')" % str(self).encode('string_escape')
+
+
+class TokenGrammar(Grammar):
+    """A Grammar which takes a list of pre-lexed tokens instead of text
+
+    This is useful if you want to do the lexing yourself, as a separate pass:
+    for example, to implement indentation-based languages.
+
+    """
+    def _expressions_from_rules(self, rules, custom_rules):
+        tree = rule_grammar.parse(rules)
+        return TokenRuleVisitor(custom_rules).visit(tree)
 
 
 class BootstrappingGrammar(Grammar):
@@ -346,11 +366,7 @@ class RuleVisitor(NodeVisitor):
 
     def visit_spaceless_literal(self, spaceless_literal, visited_children):
         """Turn a string literal into a ``Literal`` that recognizes it."""
-        # Piggyback on Python's string support so we can have backslash
-        # escaping and niceties like \n, \t, etc.
-        # string.decode('string_escape') would have been a lower-level
-        # possibility.
-        return Literal(ast.literal_eval(spaceless_literal.text))
+        return Literal(evaluate_string(spaceless_literal.text))
 
     def visit_literal(self, literal, (spaceless_literal, _)):
         """Pick just the literal out of a literal-and-junk combo."""
@@ -432,6 +448,21 @@ class RuleVisitor(NodeVisitor):
         # it's surprising and requires writing lame branches like this.
         return rule_map, (rule_map[rules[0].name]
                           if isinstance(rules, list) and rules else None)
+
+
+class TokenRuleVisitor(RuleVisitor):
+    """A visitor which builds expression trees meant to work on sequences of
+    pre-lexed tokens rather than strings"""
+
+    def visit_spaceless_literal(self, spaceless_literal, visited_children):
+        """Turn a string literal into a ``TokenMatcher`` that matches
+        ``Token`` objects by their ``type`` attributes."""
+        return TokenMatcher(evaluate_string(spaceless_literal.text))
+
+    def visit_regex(self, regex, (tilde, literal, flags, _)):
+        raise BadGrammar('Regexes do not make sense in TokenGrammars, since '
+                         'TokenGrammars operate on pre-lexed tokens rather '
+                         'than characters.')
 
 
 # Bootstrap to level 1...

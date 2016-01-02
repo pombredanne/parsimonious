@@ -179,7 +179,7 @@ class NodeVisitor(object):
     grammar = None
 
     #: Classes of exceptions you actually intend to raise during visitation
-    #: and which should propogate out of the visitor. These will not be
+    #: and which should propagate out of the visitor. These will not be
     #: wrapped in a VisitationError when they arise.
     unwrapped_exceptions = ()
 
@@ -296,7 +296,7 @@ def rule(rule_string):
     and the grammar definition.
 
     On an implementation level, all ``@rule`` rules get stitched together into
-    a :class:`~parsimonoius.Grammar` that becomes the NodeVisitor's
+    a :class:`~parsimonious.Grammar` that becomes the NodeVisitor's
     :term:`default grammar`.
 
     Typically, the choice of a default rule for this grammar is simple: whatever
