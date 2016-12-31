@@ -322,13 +322,28 @@ Niceties
 Version History
 ===============
 
+0.7.0
+  * Add experimental token-based parsing, via TokenGrammar class, for those
+    operating on pre-lexed streams of tokens. This can, for example, help parse
+    indentation-sensitive languages that use the "off-side rule", like Python.
+    (Erik Rose)
+  * Common codebase for Python 2 and 3: no more 2to3 translation step (Mattias
+    Urlichs, Lucas Wiman)
+  * Drop Python 3.1 and 3.2 support.
+  * Fix a bug in ``Grammar.__repr__`` which fails to work on Python 3 since the
+    string_escape codec is gone in Python 3. (Lucas Wiman)
+  * Don't lose parentheses when printing representations of expressions.
+    (Michael Kelly)
+  * Make Grammar an immutable mapping (until we add automatic recompilation).
+    (Michael Kelly)
+
 0.6.2
-    * Make grammar compilation 100x faster. Thanks to dmoisset for the initial
-      patch.
+  * Make grammar compilation 100x faster. Thanks to dmoisset for the initial
+    patch.
 
 0.6.1
-    * Fix bug which made the default rule of a grammar invalid when it
-      contained a forward reference.
+  * Fix bug which made the default rule of a grammar invalid when it
+    contained a forward reference.
 
 0.6
   .. warning::

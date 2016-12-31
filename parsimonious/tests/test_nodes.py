@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from nose import SkipTest
-from nose.tools import eq_, assert_raises
+from nose.tools import eq_, ok_, assert_raises
 
 from parsimonious import Grammar, NodeVisitor, VisitationError, rule
 from parsimonious.nodes import Node
@@ -67,7 +67,6 @@ def test_str():
     n = Node('text', 'o hai', 0, 5)
     good = '<Node called "text" matching "o hai">'
     eq_(str(n), good)
-    eq_(unicode(n), good)
 
 
 def test_repr():
@@ -143,3 +142,9 @@ def test_unwrapped_exceptions():
             raise PrimalScream('This should percolate up!')
 
     assert_raises(PrimalScream, Screamer().parse, 'howdy')
+
+
+def test_node_inequality():
+    node = Node('text', 'o hai', 0, 5)
+    ok_(node != 5)
+    ok_(node != None)
